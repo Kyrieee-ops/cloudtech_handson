@@ -1,46 +1,19 @@
 # DBeaverを使用してAmazon RDSへ接続
-DBeaverを利用して、プライベートサブネットに配置したAmazon RDSへ接続する方法について解説します。
+プライベートサブネットに構築したEC2インスタンス(踏み台経由)でDBeaverからAmazon RDSへ接続する方法について解説します。
 
+本解説ではSession Managerを使ってSSH鍵を使用せず、プライベートサブネットのEC2インスタンスに接続します。
 
-## 前提
----
-本解説では以下の構成で作成済であることを前提とします。<br>
-※各リソースの名前については適宜任意の名称に変更可<br>
-※本解説ではdevとすることで開発環境で作成することを前提としています
+プライベートサブネットに配置したEC2へ接続するには、VPCエンドポイントが必要です。
 
+VPCエンドポイントを使用することでプライベートな接続を確立することができます。
 
-VPC
-|項目名|Name/値|
-|---|---|
-|VPC|dev-vpc|
-|VPC CIDR|10.0.0.0.21|
-
-インターネットゲートウェイ
-|項目名|Name|
-|---|---|
-|インターネットゲートウェイ|dev-vpc-igw|
-dev-vpcへdev-vpc-igwをアタッチ済みであること
-
-ルートテーブル
-|項目名|Name|送信先|ターゲット|
-|---|---|---|---|
-|ルートテーブル|dev-vpc-rtb-public|0.0.0.0/0, 10.0.0.0/21|dev-vpc-igw|
-|ルートテーブル|dev-vpc-rtb-private|10.0.0.0/21|local|
-
-
-サブネット
-|Name|CIDR|Availability Zone|Route Table|
-|---|---|---|---|
-|dev-vpc-subnet-public1-ap-northeast-1a|10.0.0.0/24|ap-northeast-1a|dev-vpc-rtb-public|
-|dev-vpc-subnet-private1-ap-northeast-1a|10.0.2.0/24|ap-northeast-1a|dev-vpc-rtb-private|
-|dev-vpc-subnet-public2-ap-northeast-1c|10.0.1.0/24|ap-northeast-1c||
-|dev-vpc-subnet-private2-ap-northeast-1c|10.0.3.0/24|ap-northeast-1c||
+クライアントマシンからEC2インスタンスを介してリモートホストへのポートフォワーディングを使用し、Amazon RDSへのアクセスをします。
 
 
 
 ## DBeaverとは
 ---
-DBeaverとはSQLを扱いためのクライアントツールです。<br>
+DBeaverとはSQLを扱うためのクライアントツールです。<br>
 [公式サイト](https://dbeaver.io/)では以下のように説明しています。
 
 > 開発者、データベース管理者、アナリスト、およびデータベースを操作する必要があるすべての人のための無料のマルチプラットフォームデータベースツール。MySQL、PostgreSQL、SQLite、Oracle、DB2、SQL Server、Sybase、MS Access、Teradata、Firebird、Apache Hive、Phoenix、Prestoなどの一般的なすべてのデータベースをサポートします。
@@ -50,118 +23,177 @@ GUIでSQLを操作できることから学習用クライアントとしてだ�
 ## DBeaverを使用してAmazon RDSへ接続するまでの流れ
 ---
 全体の流れは以下の通りです。
-- EC2を作成します
-- RDS用のセキュリティグループを作成します
-- RDSサブネットグループを作成します
-- RDSをPrivateSubnetに作成します
+- IAMロールを作成します
+- EC2のセキュリティグループを作成します
+- VPCエンドポイントのセキュリティグループを作成します
+- Amazon RDS用のセキュリティグループを作成します
+- Amazon RDSをプライベートサブネットに作成します
+- クライアントマシンを設定します
 - DBeaverをインストールします
-- DBeaverのSSH Tunnel設定します
-- DBeaverから踏み台サーバを経由してRDSに接続します
+- SSMリモートポートフォワーディングを使用し、DBeaverからテスト接続をします
 
-
-## EC2を作成する
+## IAMロールを作成
 ---
-1. 名前: step-server1(仮)
-2. アプリケーションおよびOSイメージ: Amazon Linux2
-3. インスタンスタイプ: t2.micro
-4. キーペア: 新しいキーペアを作成: 
-    - キーペア名: stepserver-key
-5. ネットワーク設定
-    - VPC: dev-vpc
-    - サブネット: dev-vpc-subnet-public1-ap-norheast-1a
-    - パブリックIPの自動割り当て: 有効化
-    - セキュリティグループを作成
-        - セキュリティグループ名: step-server-sg
-        - 説明: step-server-sg
-    - インバウンドセキュリティグループのルール
-        - タイプ: ssh(デフォルトの設定)
-        - ソースタイプ: 任意の場所、ソースに0.0.0.0/0(デフォルト設定)
-6. ストレージを設定
-デフォルト設定のまま
+1. ロールを選択します
+2. ロールを作成します
+3. 信頼されたエンティティタイプ: AWSサービスを選択します
+    - ユースケース: EC2を選択し次へ
+4. 許可ポリシーの検索から「AmazonSSMManagedInstanceCore」を検索し、チェックを入れ次へ
+5. ロール名を入力します
+6. ロールを作成をします
 
-上記を設定し、インスタンスを起動します。
+上記手順でSession Managerを使用してEC2インスタンスにアクセス許可するためのIAMロールが作成できます。
+このIAMロールをEC2インスタンス作成時にアタッチします。
+
+## EC2のセキュリティグループを作成
+---
+EC2のセキュリティグループはSession Manamgerを使用しEC2へアクセスするため、インバウンドルールは無しのものを作成します。
+
+## VPCエンドポイントのセキュリティグループを作成
+---
+VPCエンドポイントのセキュリティグループは以下のように作成します。
+
+インバウンドルール: 
+
+    - タイプ: HTTPS
+    - ソース: VPC CIDR
+
+このインバウンドルールを設定することで、VPCエンドポイントとの通信がHTTPSプロトコルを使用して暗号化され、データの安全性が向上します。
+
+アウトバウンドルール: 
+
+    - 全てのトラフィックを許可
+
+## VPCエンドポイントの作成
+---
+プライベートサブネット内のEC2にSession Managerを利用するには、VPCエンドポイントを作成し、アクセスする必要があります。
+
+以下の3つのVPCエンドポイントを作成します。
+- com.amazonaws.ap-northeast-1.ssm
+    - AWS Systems Manager (以下SSM) サービス全般で使用
+- com.amazonaws.ap-northeast-1.ssmmessages
+    - Session Managerで使用
+- com.amazonaws.ap-northeast-1.ec2messages
+    - SSMエージェントがSSMサービスを使用
+
 
 ## Amazon RDSのセキュリティグループを作成
 ---
-RDS用のセキュリティグループを作成します。<br>
-EC2のセキュリティグループで作成したstep-server-sgをインバウンドルールに設定することで、step-server-sgの対象のリソースからアクセスを許可することが可能です。
+RDS用のセキュリティグループを作成します。
 
-1. セキュリティグループ名: rds-sg
-2. 説明: rds-sg
-3. VPC: dev-vpc
-4. インバウンドルール: 
+EC2のセキュリティグループをインバウンドルールに設定することで、EC2のセキュリティグループに設定された対象のリソースからアクセスを許可することが可能です。
+
+1. インバウンドルール: 
     - タイプ: MYSQL/Aurora
-    - ソース: カスタム, step-server-sg
- 5. アウトバウンドルール: 
+    - ソース: カスタム, EC2のセキュリティグループ
+2. アウトバウンドルール: 
     - タイプ: すべてのトラフィック
     - 送信先: カスタム, 0.0.0.0/0
-6. タグ-オプション: 
-    - キー: Name
-    - 値: rds-sg
 
 上記を設定し、セキュリティグループを作成します。
 
-## RDSサブネットグループを作成
----
-
-1. サービス名の検索窓から「rds」で検索し、Amazon RDSの画面を開きます。
-2. 左ペインのサブネットグループを選択します。
-3. DBサブネットグループを作成をクリックします。
-4. サブネットグループの詳細: 
-    - 名前: dev-subnet-group
-    - 説明: dev-subnet-group
-    - VPC: dev-vpc
-5. サブネットを追加: 
-    - アベイラビリティゾーンを選択: 
-        - ap-northeast-1a
-        - ap-northeast-1c
-    - サブネットを選択: 
-        - ap-northeast-1aの10.0.2.0/24のsubnetを選択
-        - ap-northeast-1cの10.0.3.0/24のsubnetを選択
 
 
 ## Amazon RDSをプライベートサブネットに作成
 ---
-1. Amazon RDS画面の左ペインからデータベースを選択します。
-2. データベースの作成をクリックします。
-3. データベース作成方法の選択: 標準作成
-4. エンジンのオプション: MySQLを選択
-5. エンジンバージョン: デフォルトのまま
-6. テンプレート: 開発/テスト環境を選択、もしくは料金が気になる方は無料利用枠を選択
-7. 設定: 
+
+1. エンジンのオプション: MySQLを選択
+2. エンジンバージョン: デフォルトのまま
+3. テンプレート: 開発/テスト環境を選択、もしくは料金が気になる方は無料利用枠を選択
+4. 設定: 
     - DBインスタンス識別子: 任意の名前を入力(デフォルトのままでも問題ありません)
-    - マスターユーザー名: admin
+    - マスターユーザー名: 任意の名前を入力
     - マスターパスワード: 任意のパスワードを入力
     - マスターパスワードの確認: マスターパスワードと同様のものを入力
-8. インスタンスの設定: 
+5. インスタンスの設定: 
     - DBインスタンスクラス: バースト可能クラス(t クラスを含む)
     - db.t2.microを選択
-9. ストレージ: 
+6. ストレージ: 
     - ストレージタイプ: 汎用SSD(gp2)
     - ストレージ割り当て: 20GiB
     - 最大ストレージしきい値: 1000Gib
-10. 接続: 
+7. 接続: 
     - コンピューティングリソース: EC2コンピューティングリソースに接続しない
-    - VPC: dev-vpcを選択
-    - DBサブネットグループ: dev-subnet-groupを選択
     - パブリックアクセス: なしを選択
-    - VPCセキュリティグループ: 既存の選択
-    - 既存のVPCセキュリティグループ: rds-sgを選択
-    - アベイラビリティゾーン: ap-northeast-1a
     - 追加設定: データベースポート3306
-11. データベース認証: 
+8. データベース認証: 
     - データベース認証オプション: パスワード認証
-12. 追加設定: 
+9. 追加設定: 
     - データベースの選択肢: 
-    - 最初のデータベース名: testdatabase
+    - 最初のデータベース名: 任意のデータベース名を入力
     - DBパラメータグループ: default.mysql8.0
     - オプショングループ: default.mysql8.0
     - バックアップ: 
         - 自動バックアップを有効にします: チェック
         - バックアップ保持期間: 7日間
 
-上記以外の選択肢はデフォルトのままでとします。<br>
+上記以外の選択肢はデフォルトのままでとします。
+
 これでデータベースの作成をクリックします。
+
+## クライアントマシンの設定
+---
+
+事前準備としてSession Managerのプラグインをインストールします。
+各OSによってインストール方法が異なります。
+AWS公式ガイドに沿ってインストールをします。
+https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
+
+インストール完了後、以下コマンドを実行し(Windowsの場合PowerShell、Macの場合ターミナル)、インストールが問題なく完了していることを確認します。
+
+```
+session-manager-plugin
+```
+以下のように表示されていればSession Managerのプラグインインストールは成功しています。
+```
+The Session Manager plugin was installed successfully. Use the AWS CLI to start a session.
+```
+
+### WindowsOSの場合の補足
+WindowsOSの場合環境変数パスが設定されていないと、コマンドが通らないことがあります。
+その場合には環境変数のパスを追加する必要があります。
+
+#### 環境変数の追加方法
+- 「スタート」メニューを右クリックし、「システム」を選択します
+- 「システムの詳細設定」をクリックします
+- 「環境変数」ボタンをクリックします
+- 「システム変数」セクションで、Path変数を見つけて選択します
+- 「編集」をクリックします
+- C:\Program Files\Amazon\SessionManagerPlugin\bin\session-manager-plugin.exe を追加しOKします。(環境によってパスが異なる場合があります)
+
+
+## Session Managerのポートフォワードを開始
+---
+WindowsOSの場合:
+
+以下コマンドをPowerShellで実行します。
+
+```PowerShell
+aws ssm start-session `
+  --target EC2インスタンスのインスタンスID `
+  --document-name AWS-StartPortForwardingSessionToRemoteHost `
+  --parameters '{\"portNumber\":[\"3306\"], \"localPortNumber\":[\"3306\"], \"host\":[\"RDSのエンドポイント\"]}'
+```
+
+MacOSの場合: 
+
+以下コマンドをターミナルで実行します。
+
+```Terminal
+aws ssm start-session \
+  --target i-EC2踏み台ホストのインスタンスID \
+  --document-name AWS-StartPortForwardingSessionToRemoteHost \
+  --parameters '{"portNumber":["3306"], "localPortNumber":["3306"], "host":["RDSのエンドポイント"]}'
+
+```
+
+以下のようなメッセージが表示されればポートフォワードを開始し、ローカルホストのポート3306をAmazon RDSのポート3306へ転送している状態で接続待ちになっています。
+```
+Starting session with SessionId: Administrator-03c193d64c5411884
+Port 3306 opened for sessionId Administrator-03c193d64c5411884.
+Waiting for connections...
+```
+
 
 
 ## DBeaverのインストール
@@ -189,29 +221,11 @@ DBeaverからAmazon RDSへ接続する際に、
 2. サンプルのデータベースを作成しますか？のメッセージが表示されますが、RDS作成時に最初のデータベース名で入力したデータベースが作成されているため、ここでは作成不要とし、いいえを選択します。
 3. 新しい接続タイプを選択する画面でMySQLを選択し、次へをクリックします。
 4. 接続先情報を入力します。
-    - Server Host: RDSのエンドポイントを入力
-    - Datebase: 空白のまま
-    - ユーザー名: admin
+    - Server Host: localhost
+    - Datebase: 空白
+    - ユーザー名: RDS作成時に入力したマスターユーザー名入力
     - パスワード: RDS作成時に作成したマスターパスワードを入力
-5. タブをSSHのタブに切り替えます。
-    - 「SSH Tunnel」を使用するのチェックボックスにチェック
-    - Host/IP: EC2のパブリックIPアドレス
-    - User Name: ec2-user
-    - Authentication Method: Public Keyを選択
-    - Private Key: EC2作成時にダウンロードしたpemファイルを絶対パスで指定
 
 上記を設定したらテスト接続をクリックします。
-初めて対象のサーバに接続する際には、
 
-```
-The authenticity of host EC2のパブリックIPアドレス can't be esblished. ssh-ed25519 key fingerprint is xxxxxxxxxxxxxxxx. Are you sure you want to continue connecting?
-```
-と聞かれることがありますが、「はい」を選択します。
-ここでいうサーバとはAmazon RDSのことを指しています。<br>
-SSHでサーバに初めて接続した際には、本当にそのサーバに接続して良いですか？という確認のメッセージが表示されます。<br>
-fingerprint is xxxxxxxxxxxxxxxx.と表示されているように、これはフィンガープリントと言われる、サーバの指紋です。<br>
-SSH接続ではホスト認証というものが行われますが、その際に使用されるのこのフィンガープリントです。<br>
-ホスト認証とはSSHでクライアントがサーバに接続する際に、そのサーバが本当に接続したいサーバであるかを確認することです。
-
-接続テストボタンをクリックし、接続済みの画面が表示されれば、問題なくAmazon RDSへの接続が完了です。
-
+接続が問題なく確立できれば、接続済みのメッセージが表示されます。
