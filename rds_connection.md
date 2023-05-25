@@ -38,29 +38,29 @@ GUIでSQLを操作できることから学習用クライアントとしてだ�
 
 1. ロールを選択します
 
-![iam_role1](../cloudtech_handson/images/iam_role1.png)
+![iam_role1](./images/iam_role1.png)
 
 2. ロールを作成します
 
-![iam_role2](../cloudtech_handson/images/iam_role2.png)
+![iam_role2](./images/iam_role2.png)
 
 
 3. 信頼されたエンティティタイプ: AWSサービスを選択します
     - ユースケース: EC2を選択し次へ
 
-![iam_role3](../cloudtech_handson/images/iam_role3.png)
+![iam_role3](./images/iam_role3.png)
 
 4. 許可ポリシーの検索から「AmazonSSMManagedInstanceCore」を検索し、チェックを入れ次へ
 
-![iam_role4](../cloudtech_handson/images/iam_role4.png)
+![iam_role4](./images/iam_role4.png)
 
 5. ロール名を入力します
 
-![iam_role5](../cloudtech_handson/images/iam_role5.png)
+![iam_role5](./images/iam_role5.png)
 
 6. ロールを作成をします
 
-![iam_role6](../cloudtech_handson/images/iam_role6.png)
+![iam_role6](./images/iam_role6.png)
 
 上記手順でSession Managerを使用してEC2インスタンスにアクセス許可するためのIAMロールが作成できます。
 このIAMロールをEC2インスタンス作成時にアタッチします。
@@ -80,7 +80,7 @@ EC2のセキュリティグループはSession Manamgerを使用しEC2へアク�
 
     - 全てのトラフィックを許可
 
-![ec2_sg2](../cloudtech_handson/images/ec2_sg2.png)
+![ec2_sg2](./images/ec2_sg2.png)
 
 
 ## VPCエンドポイントのセキュリティグループを作成
@@ -98,7 +98,7 @@ VPCエンドポイントのセキュリティグループは以下のように�
 
     - 全てのトラフィックを許可
 
-![ssm_sg2](../cloudtech_handson/images/ssm_sg2.png)
+![ssm_sg2](./images/ssm_sg2.png)
 
 
 ## VPCエンドポイントの作成
@@ -113,17 +113,17 @@ VPCエンドポイントのセキュリティグループは以下のように�
 - com.amazonaws.ap-northeast-1.ec2messages
     - SSMエージェントがSSMサービスを使用
 
-![vpc_ep_ssm1](../cloudtech_handson/images/vpc_ep_ssm1.png)
+![vpc_ep_ssm1](./images/vpc_ep_ssm1.png)
 
-![vpc_ep_ssm2](../cloudtech_handson/images/vpc_ep_ssm2.png)
+![vpc_ep_ssm2](./images/vpc_ep_ssm2.png)
 
-![vpc_ep_ssmmessages](../cloudtech_handson/images/vpc_ep_ssmmessages.png)
+![vpc_ep_ssmmessages](./images/vpc_ep_ssmmessages.png)
 
-![vpc_ep_ec2messages](../cloudtech_handson/images/vpc_ep_ec2messages.png)
+![vpc_ep_ec2messages](./images/vpc_ep_ec2messages.png)
 
 VPCエンドポイントのセキュリティグループにはVPCセキュリティグループの作成時に作成したセキュリティグループを選択します。
 
-![vpc_ep_ssm3](../cloudtech_handson/images/vpc_ep_ssm3.png)
+![vpc_ep_ssm3](./images/vpc_ep_ssm3.png)
 
 
 ## Amazon RDSのセキュリティグループを作成
@@ -148,18 +148,18 @@ EC2のセキュリティグループをインバウンドルールに設定す�
 
 1. エンジンのオプション: MySQLを選択
 
-![rds_create1](../cloudtech_handson/images/rds_create1.png)
+![rds_create1](./images/rds_create1.png)
 
 2. エンジンバージョン: デフォルトのまま
 
-![rds_create2](../cloudtech_handson/images/rds_create2.png)
+![rds_create2](./images/rds_create2.png)
 
 
 3. テンプレート: 開発/テスト環境を選択、もしくは料金が気になる方は無料利用枠を選択
 
-![rds_create3-1](../cloudtech_handson/images/rds_create3-1.png)
+![rds_create3-1](./images/rds_create3-1.png)
 
-![rds_create3-2](../cloudtech_handson/images/rds_create3-2.png)
+![rds_create3-2](./images/rds_create3-2.png)
 
 
 4. 設定: 
@@ -168,34 +168,34 @@ EC2のセキュリティグループをインバウンドルールに設定す�
     - マスターパスワード: 任意のパスワードを入力
     - マスターパスワードの確認: マスターパスワードと同様のものを入力
 
-![rds_create4](../cloudtech_handson/images/rds_create4.png)
+![rds_create4](./images/rds_create4.png)
 
 5. インスタンスの設定: 
     - DBインスタンスクラス: バースト可能クラス(t クラスを含む)
     - db.t2.microを選択
 
-![rds_create5](../cloudtech_handson/images/rds_create5.png)
+![rds_create5](./images/rds_create5.png)
 
 6. ストレージ: 
     - ストレージタイプ: 汎用SSD(gp2)
     - ストレージ割り当て: 20GiB
     - 最大ストレージしきい値: 1000Gib
 
-![rds_create6](../cloudtech_handson/images/rds_create6.png)
+![rds_create6](./images/rds_create6.png)
 
 7. 接続: 
     - コンピューティングリソース: EC2コンピューティングリソースに接続しない
     - パブリックアクセス: なしを選択
     - 追加設定: データベースポート3306
 
-![rds_create7](../cloudtech_handson/images/rds_create7.png)
+![rds_create7](./images/rds_create7.png)
 
-![rds_create10](../cloudtech_handson/images/rds_create10.png)
+![rds_create10](./images/rds_create10.png)
 
 8. データベース認証: 
     - データベース認証オプション: パスワード認証
 
-![rds_create11](../cloudtech_handson/images/rds_create11.png)
+![rds_create11](./images/rds_create11.png)
 
 9. 追加設定: 
     - データベースの選択肢: 
@@ -206,9 +206,9 @@ EC2のセキュリティグループをインバウンドルールに設定す�
         - 自動バックアップを有効にします: チェック
         - バックアップ保持期間: 7日間
 
-![rds_create12](../cloudtech_handson/images/rds_create12.png)
+![rds_create12](./images/rds_create12.png)
 
-![rds_create13](../cloudtech_handson/images/rds_create13.png)
+![rds_create13](./images/rds_create13.png)
 
 上記以外の選択肢はデフォルトのままでとします。
 
@@ -224,15 +224,15 @@ https://docs.aws.amazon.com/ja_jp/systems-manager/latest/userguide/session-manag
 
 
 WindowsOSの場合
-![sessionmanager_plugin_windows1](../cloudtech_handson/images/sessionmanager_plugin_windows1.png)
+![sessionmanager_plugin_windows1](./images/sessionmanager_plugin_windows1.png)
 
-![sessionmanager_plugin_windows2](../cloudtech_handson/images/sessionmanager_plugin_windows2.png)
+![sessionmanager_plugin_windows2](./images/sessionmanager_plugin_windows2.png)
 
 MacOSの場合
 
-![sessionmanager_plugin_mac1](../cloudtech_handson/images/sessionmanager_plugin_mac1.png)
+![sessionmanager_plugin_mac1](./images/sessionmanager_plugin_mac1.png)
 
-![sessionmanager_plugin_mac2](../cloudtech_handson/images/sessionmanager_plugin_mac2.png)
+![sessionmanager_plugin_mac2](./images/sessionmanager_plugin_mac2.png)
 
 インストール完了後、以下コマンドを実行し(Windowsの場合PowerShell、Macの場合ターミナル)、インストールが問題なく完了していることを確認します。
 
@@ -253,23 +253,23 @@ WindowsOSの場合環境変数パスが設定されていないと、コマン�
 
 - 「システムの詳細設定」をクリックします
 
-![windows_envvar1](../cloudtech_handson/images/windows_envvar1.png)
+![windows_envvar1](./images/windows_envvar1.png)
 
 - 「環境変数」ボタンをクリックします
 
-![windows_envvar2](../cloudtech_handson/images/windows_envvar2.png)
+![windows_envvar2](./images/windows_envvar2.png)
 
 - 「システム変数」セクションで、Path変数を見つけて選択します
 
 - 「編集」をクリックします
 
-![windows_envvar3](../cloudtech_handson/images/windows_envvar3.png)
+![windows_envvar3](./images/windows_envvar3.png)
 
 
 - C:\Program Files\Amazon\SessionManagerPlugin\bin\session-manager-plugin.exe を追加しOKします。(環境によってパスが異なる場合があります)
 
 
-![windows_envvar4](../cloudtech_handson/images/windows_envvar4.png)
+![windows_envvar4](./images/windows_envvar4.png)
 
 ## Session Managerのポートフォワードを開始
 ---
@@ -313,35 +313,35 @@ https://dbeaver.io/download/
 
 2. インストーラを起動しPlease select a language. は日本語を選択しOKをクリックします。
 
-![dbeaver_install1](../cloudtech_handson/images/dbeaver_install1.png)
+![dbeaver_install1](./images/dbeaver_install1.png)
 
 3. DBeaver Communityセットアップへようこそ画面: 次へをクリックします。
 
-![dbeaver_install2](../cloudtech_handson/images/dbeaver_install2.png)
+![dbeaver_install2](./images/dbeaver_install2.png)
 
 4. 使用許諾契約: 同意するをクリックします。
 
-![dbeaver_install3](../cloudtech_handson/images/dbeaver_install3.png)
+![dbeaver_install3](./images/dbeaver_install3.png)
 
 5. Choose Users: For me(user)を選択し、次へをクリックします。
 
-![dbeaver_install4](../cloudtech_handson/images/dbeaver_install4.png)
+![dbeaver_install4](./images/dbeaver_install4.png)
 
 6. 構成要素の選択: インストールする構成要素を選択: デフォルトのまま次へをクリックします。
 
-![dbeaver_install5](../cloudtech_handson/images/dbeaver_install5.png)
+![dbeaver_install5](./images/dbeaver_install5.png)
 
 7. インストール先の選択: 特に指定がなければ次へをクリックします。
 
-![dbeaver_install6](../cloudtech_handson/images/dbeaver_install6.png)
+![dbeaver_install6](./images/dbeaver_install6.png)
 
 8. スタートメニューのフォルダの選択: 特に指定がなければインストールをクリックします。
 
-![dbeaver_install7](../cloudtech_handson/images/dbeaver_install7.png)
+![dbeaver_install7](./images/dbeaver_install7.png)
 
 9. DBeaver Community セットアップの完了: 完了をクリックします。
 
-![dbeaver_install8](../cloudtech_handson/images/dbeaver_install8.png)
+![dbeaver_install8](./images/dbeaver_install8.png)
 
 
 ## DBeaverを使用してAmazon RDSへ接続
@@ -352,11 +352,11 @@ https://dbeaver.io/download/
 1. DBeaverを起動します。
 2. サンプルのデータベースを作成しますか？のメッセージが表示されますが、RDS作成時に最初のデータベース名で入力したデータベースが作成されているため、ここでは作成不要とし、いいえを選択します。
 
-![dbeaver_install9](../cloudtech_handson/images/dbeaver_install9.png)
+![dbeaver_install9](./images/dbeaver_install9.png)
 
 3. 新しい接続タイプを選択する画面でMySQLを選択し、次へをクリックします。
 
-![dbeaver_install10](../cloudtech_handson/images/dbeaver_install10.png)
+![dbeaver_install10](./images/dbeaver_install10.png)
 
 4. 接続先情報を入力します。
     - Server Host: localhost
@@ -364,7 +364,7 @@ https://dbeaver.io/download/
     - ユーザー名: RDS作成時に入力したマスターユーザー名入力
     - パスワード: RDS作成時に作成したマスターパスワードを入力
 
-![dbeaver_install11](../cloudtech_handson/images/dbeaver_install11.png)
+![dbeaver_install11](./images/dbeaver_install11.png)
 
 上記を設定したらテスト接続をクリックします。
 
